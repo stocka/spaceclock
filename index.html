@@ -26,29 +26,43 @@
 	</style>
 	<script type="text/javascript">
 
-		var container,
-			WIDTH, 
+		// Store width/height values
+		var WIDTH, 
 			HEIGHT,
 			HALF_WIDTH,
 			HALF_HEIGHT,
 			ASPECT;
 
+		// Store view constants
 		var VIEW_ANGLE = 75,
 	    NEAR = 0.1,
-	    FAR = 10000,
-	    STARLIGHT = 0xf5f6ce,
+	    FAR = 10000;
+
+	  // Store mathematical constants
+		var FULLCIRCLE = 2 * Math.PI,
+	    RADIAN = Math.PI / 180,
+	  	RADIANOFFSET = 0.5 * Math.PI;
+
+	  // Store colors
+		var STARLIGHT = 0xf5f6ce,
 	    AMBIENTLIGHT = 0x111111,
 	    ORBITCOLOR = 0x333333,
-	    FULLCIRCLE = 2 * Math.PI,
-	    RADIAN = Math.PI / 180,
-	  	RADIANOFFSET = 0.5 * Math.PI,
+	    SECONDCOLOR = 0xf5a9a9,
+	    MINUTECOLOR = 0x64fe2e,
+	    HOURCOLOR = 0x2e9afe;
+
+	  // Store planetary size/radius information
+	  var SECONDRADIUS = 75.0,
+	  	SECONDSIZE = 10,
+	  	MINUTERADIUS = 130.0,
+	  	MINUTESIZE = 12,
+	  	HOURRADIUS = 200.0,
+	  	HOURSIZE = 16,
+	  	SUNSIZE = 10,
 	  	ORBITRESOLUTION = 180;
 
-	  var secondRadius = 75.0,
-	  	minuteRadius = 130.0,
-	  	hourRadius = 200.0;
-
-	  var scene,
+	  var container,
+	  	scene,
 	  	renderer,
 	  	camera,
 	  	centerSun,
@@ -109,9 +123,9 @@
 				hText = 12;
 			}
 
-			orbitMesh(secondPlanet, secondRadius, s / 60.0, secondText, s);
-			orbitMesh(minutePlanet, minuteRadius, m / 60.0, minuteText, m);
-			orbitMesh(hourPlanet, hourRadius, h / 12.0, hourText, hText);
+			orbitMesh(secondPlanet, SECONDRADIUS, s / 60.0, secondText, s);
+			orbitMesh(minutePlanet, MINUTERADIUS, m / 60.0, minuteText, m);
+			orbitMesh(hourPlanet, HOURRADIUS, h / 12.0, hourText, hText);
 			
 			renderer.render(scene, camera); 
 		}
@@ -150,6 +164,12 @@
 			scene.add(orbitLine);
 		}
 
+		function addTextNode() {
+			var textNode = $("<div class='text' />");
+			$("body").append(textNode);
+			return textNode;
+		}
+
 		$(function () {
 				container = $("#container");
 				WIDTH = container.width();
@@ -170,7 +190,7 @@
 
 				// Create the sun
 				centerSun = new THREE.Mesh( 
-					new THREE.SphereGeometry(10, 36, 12),
+					new THREE.SphereGeometry(SUNSIZE, 36, 12),
 					new THREE.MeshBasicMaterial( { color: STARLIGHT } ));
 				scene.add(centerSun);
 
@@ -184,22 +204,19 @@
 				scene.add( sunLight );
 
 				// Add second planet/orbit/text
-				secondPlanet = addPlanet(10, 0xf5a9a9);
-				addOrbit(secondRadius);
-				secondText = $("<div class='text' />");
-				$("body").append(secondText);
+				secondPlanet = addPlanet(SECONDSIZE, SECONDCOLOR);
+				addOrbit(SECONDRADIUS);
+				secondText = addTextNode();
 
 				// Add minute planet/orbit/text
-				minutePlanet = addPlanet(12, 0x64fe2e);	
-				addOrbit(minuteRadius);
-				minuteText = $("<div class='text' />");
-				$("body").append(minuteText);
+				minutePlanet = addPlanet(MINUTESIZE, MINUTECOLOR);	
+				addOrbit(MINUTERADIUS);
+				minuteText = addTextNode();
 
 				// Add hour planet/orbit/text
-				hourPlanet = addPlanet(16, 0x2e9afe);
-				addOrbit(hourRadius);
-				hourText = $("<div class='text' />");
-				$("body").append(hourText);
+				hourPlanet = addPlanet(HOURSIZE, HOURCOLOR);
+				addOrbit(HOURRADIUS);
+				hourText = addTextNode();
 
 				// Add stars and whatnot
 				var stars = new THREE.Geometry(),
