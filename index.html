@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Spaceclock</title>
+	<meta charset="utf-8" />
+	<script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+	<script src="https://raw.github.com/mrdoob/three.js/master/build/three.js"></script>
+	<link href='http://fonts.googleapis.com/css?family=Open+Sans:700' rel='stylesheet' type='text/css'>	
+	<style type="text/css">
+		body {
+			background: #000;
+		}
+		#container {
+			background: #000;
+			width: 425px;
+			height: 425px;
+		}
+		.text {
+			position: absolute;
+			z-index: 100;
+			color: white;			
+			font-family: 'Open Sans Bold', 'Open Sans', sans-serif;
+			font-weight: bold;
+			font-size: 16px;
+		}
+	</style>
+	<script type="text/javascript">
+
+		var container,
+			WIDTH, 
+			HEIGHT,
+			HALF_WIDTH,
+			HALF_HEIGHT,
+			ASPECT;
+
+		var VIEW_ANGLE = 75,
+	    NEAR = 0.1,
+	    FAR = 10000;
+
+	  var scene,
+	  	renderer,
+	  	camera;
+
+	  var centerSun,
+	  	secondPlanet,
+	  	secondText,
+	  	minutePlanet,
+	  	minuteText,
+	  	hourPlanet,
+	  	hourText;
+
+	  var FULLCIRCLE = 2 * Math.PI;
+	  var RADIANOFFSET = 0.5 * Math.PI;
+
+	  function getPercentageRadians(percent) {
+	  	// Figure out the radian location.  We offset
+	  	// by a quarter of the circle because 0 is
+	  	// actually at the 15-minute position.
+	  	var radians = -(percent * FULLCIRCLE) + RADIANOFFSET;
+
+	  	// Wrap-around.
+	  	if (radians < 0) {
+	  		radians += FULLCIRCLE;
+	  	}
+
+	  	return radians;
+	  }
+
+	  function orbitMesh(mesh, radius, percent, text, textValue) {
+	  	// Get our position in radians
+	  	var radians = getPercentageRadians(percent);
+
+	  	// Update our x/y positions of the mesh
+	  	mesh.position.x = Math.cos(radians) * radius;
+	  	mesh.position.y = Math.sin(radians) * radius;
+
+	  	// Update the text, making sure it's offset slightly
+	  	// from the mesh
+	  	var textRadius = radius * 0.95;
+	  	var textRadians = -radians;
+	  	textRadians += (0.1 * (300 / textRadius));
+
+	  	// Reposition the text, translating Three coords
+	  	// to HTML coords
+	  	text.offset({
+	  		left: Math.floor((Math.cos(textRadians) * textRadius) + HALF_WIDTH),
+	  		top: Math.floor((Math.sin(textRadians) * textRadius) + HALF_HEIGHT)
+	  	}).html(textValue);
+	  }
+
+		function render() { 
+			requestAnimationFrame(render); 
+
+			var curDateTime = new Date();
+			var s = curDateTime.getSeconds();
+			var m = curDateTime.getMinutes();
+			var h = curDateTime.getHours() % 12;
+
+			// Make sure the 0th hour renders as "12", e.g. "12 AM"
+			var hText = h;
+			if ( hText === 0 ) {
+				hText = 12;
+			}
+
+			orbitMesh(secondPlanet, 75.0, s / 60.0, secondText, s);
+			orbitMesh(minutePlanet, 130.0, m / 60.0, minuteText, m);
+			orbitMesh(hourPlanet, 200.0, h / 12.0, hourText, hText);
+			
+			renderer.render(scene, camera); 
+		}
+
+		$(function () {
+				container = $("#container");
+				WIDTH = container.width();
+				HEIGHT = container.height();
+				HALF_WIDTH = WIDTH / 2;
+				HALF_HEIGHT = HEIGHT / 2;
+				ASPECT = WIDTH / HEIGHT;
+
+				// Set up the scene/renderer
+				scene = new THREE.Scene();
+
+				camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR );
+				camera.position.z = 300;
+
+				renderer = new THREE.WebGLRenderer();
+				renderer.setSize(WIDTH, HEIGHT);
+				container.append(renderer.domElement);
+
+				// Add our different geometry items
+				centerSun = new THREE.Mesh( 
+					new THREE.SphereGeometry(10, 36, 12),
+					new THREE.MeshBasicMaterial( { color: 0xf5f6ce } ));
+				scene.add(centerSun);
+
+        var ambientLight = new THREE.AmbientLight(0x111111);
+        scene.add(ambientLight);
+
+				var sunLight = new THREE.PointLight( 0xf5f6ce, 1, WIDTH * 8 ); 
+				sunLight.position.z = 50;
+				scene.add( sunLight );
+
+				secondPlanet = new THREE.Mesh( 
+					new THREE.SphereGeometry(10, 16, 12),  
+					new THREE.MeshLambertMaterial({ 
+						color: 0xf5a9a9,
+						ambient: 0xf5a9a9 
+					})
+				);
+				scene.add(secondPlanet);
+
+				secondText = $("<div class='text' />");
+				$("body").append(secondText);
+
+				minutePlanet = new THREE.Mesh( 
+					new THREE.SphereGeometry(12, 16, 12),  
+					new THREE.MeshLambertMaterial({ 
+						color: 0x64fe2e,
+						ambient: 0x64fe2e 
+					})
+				);
+				scene.add(minutePlanet);
+
+				minuteText = $("<div class='text' />");
+				$("body").append(minuteText);
+
+				hourPlanet = new THREE.Mesh( 
+					new THREE.SphereGeometry(16, 16, 12),  
+					new THREE.MeshLambertMaterial({ 
+						color: 0x2e9afe,
+						ambient: 0x2e9afe 
+					})
+				);
+				scene.add(hourPlanet);
+
+				hourText = $("<div class='text' />");
+				$("body").append(hourText);
+
+				render();
+		});
+
+	</script>
+
+</head>
+<body>
+	<div id="container">
+	</div>
+</body>
+</html>
