@@ -35,22 +35,21 @@
 
 		var VIEW_ANGLE = 75,
 	    NEAR = 0.1,
-	    FAR = 10000;
+	    FAR = 10000,
+	    STARLIGHT = 0xf5f6ce,
+	    FULLCIRCLE = 2 * Math.PI,
+	  	RADIANOFFSET = 0.5 * Math.PI;
 
 	  var scene,
 	  	renderer,
-	  	camera;
-
-	  var centerSun,
+	  	camera,
+	  	centerSun,
 	  	secondPlanet,
 	  	secondText,
 	  	minutePlanet,
 	  	minuteText,
 	  	hourPlanet,
 	  	hourText;
-
-	  var FULLCIRCLE = 2 * Math.PI;
-	  var RADIANOFFSET = 0.5 * Math.PI;
 
 	  function getPercentageRadians(percent) {
 	  	// Figure out the radian location.  We offset
@@ -130,13 +129,13 @@
 				// Add our different geometry items
 				centerSun = new THREE.Mesh( 
 					new THREE.SphereGeometry(10, 36, 12),
-					new THREE.MeshBasicMaterial( { color: 0xf5f6ce } ));
+					new THREE.MeshBasicMaterial( { color: STARLIGHT } ));
 				scene.add(centerSun);
 
         var ambientLight = new THREE.AmbientLight(0x111111);
         scene.add(ambientLight);
 
-				var sunLight = new THREE.PointLight( 0xf5f6ce, 1, WIDTH * 8 ); 
+				var sunLight = new THREE.PointLight( STARLIGHT, 1, WIDTH * 8 ); 
 				sunLight.position.z = 50;
 				scene.add( sunLight );
 
@@ -175,6 +174,31 @@
 
 				hourText = $("<div class='text' />");
 				$("body").append(hourText);
+
+				// Add stars and whatnot
+				var stars = new THREE.Geometry(),
+					starStuff =
+		      new THREE.ParticleBasicMaterial({
+		        color: STARLIGHT,
+		        size: 3
+		      });					
+
+		    // Create the star vertices
+				for(var p = 0; p < 50; p++) {
+					// Randomly place our star
+				  var pX = Math.random() * WIDTH - HALF_WIDTH,
+				    pY = Math.random() * HEIGHT - HALF_HEIGHT,
+				    star = new THREE.Vector3(pX, pY, -100);
+
+				  // Add it to the geometry
+				  stars.vertices.push(star);
+				}
+
+				// Add the star system to the scene
+				var starSystem = new THREE.ParticleSystem(
+			    stars,
+			    starStuff);
+				scene.add(starSystem);
 
 				render();
 		});
