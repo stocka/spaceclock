@@ -37,8 +37,16 @@
 	    NEAR = 0.1,
 	    FAR = 10000,
 	    STARLIGHT = 0xf5f6ce,
+	    AMBIENTLIGHT = 0x111111,
+	    ORBITCOLOR = 0x333333,
 	    FULLCIRCLE = 2 * Math.PI,
-	  	RADIANOFFSET = 0.5 * Math.PI;
+	    RADIAN = Math.PI / 180,
+	  	RADIANOFFSET = 0.5 * Math.PI,
+	  	ORBITRESOLUTION = 180;
+
+	  var secondRadius = 75.0,
+	  	minuteRadius = 130.0,
+	  	hourRadius = 200.0;
 
 	  var scene,
 	  	renderer,
@@ -101,11 +109,45 @@
 				hText = 12;
 			}
 
-			orbitMesh(secondPlanet, 75.0, s / 60.0, secondText, s);
-			orbitMesh(minutePlanet, 130.0, m / 60.0, minuteText, m);
-			orbitMesh(hourPlanet, 200.0, h / 12.0, hourText, hText);
+			orbitMesh(secondPlanet, secondRadius, s / 60.0, secondText, s);
+			orbitMesh(minutePlanet, minuteRadius, m / 60.0, minuteText, m);
+			orbitMesh(hourPlanet, hourRadius, h / 12.0, hourText, hText);
 			
 			renderer.render(scene, camera); 
+		}
+
+		function addPlanet(planetSize, planetColor) {
+			var planet = new THREE.Mesh( 
+				new THREE.SphereGeometry(planetSize, 16, 12),  
+				new THREE.MeshLambertMaterial({ 
+					color: planetColor,
+					ambient: planetColor 
+				})
+			);
+			scene.add(planet);
+
+			return planet;
+		}
+
+		function addOrbit(radius) {
+			var size = 360 / ORBITRESOLUTION;
+			var orbit = new THREE.Geometry();
+
+			for ( var i = 0; i <= ORBITRESOLUTION; i ++ ) {
+				segment = (i * size) * RADIAN;
+				orbit.vertices.push( 
+					new THREE.Vector3( 
+						Math.cos( segment ) * radius, 
+						Math.sin( segment ) * radius,
+						0
+				));
+			}
+
+			var orbitLine = new THREE.Line( 
+				orbit, 
+				new THREE.LineBasicMaterial( { color: ORBITCOLOR } )
+			);
+			scene.add(orbitLine);
 		}
 
 		$(function () {
@@ -126,52 +168,36 @@
 				renderer.setSize(WIDTH, HEIGHT);
 				container.append(renderer.domElement);
 
-				// Add our different geometry items
+				// Create the sun
 				centerSun = new THREE.Mesh( 
 					new THREE.SphereGeometry(10, 36, 12),
 					new THREE.MeshBasicMaterial( { color: STARLIGHT } ));
 				scene.add(centerSun);
 
-        var ambientLight = new THREE.AmbientLight(0x111111);
+				// Add minimal ambient light
+        var ambientLight = new THREE.AmbientLight(AMBIENTLIGHT);
         scene.add(ambientLight);
 
+        // Let there be light!
 				var sunLight = new THREE.PointLight( STARLIGHT, 1, WIDTH * 8 ); 
 				sunLight.position.z = 50;
 				scene.add( sunLight );
 
-				secondPlanet = new THREE.Mesh( 
-					new THREE.SphereGeometry(10, 16, 12),  
-					new THREE.MeshLambertMaterial({ 
-						color: 0xf5a9a9,
-						ambient: 0xf5a9a9 
-					})
-				);
-				scene.add(secondPlanet);
-
+				// Add second planet/orbit/text
+				secondPlanet = addPlanet(10, 0xf5a9a9);
+				addOrbit(secondRadius);
 				secondText = $("<div class='text' />");
 				$("body").append(secondText);
 
-				minutePlanet = new THREE.Mesh( 
-					new THREE.SphereGeometry(12, 16, 12),  
-					new THREE.MeshLambertMaterial({ 
-						color: 0x64fe2e,
-						ambient: 0x64fe2e 
-					})
-				);
-				scene.add(minutePlanet);
-
+				// Add minute planet/orbit/text
+				minutePlanet = addPlanet(12, 0x64fe2e);	
+				addOrbit(minuteRadius);
 				minuteText = $("<div class='text' />");
 				$("body").append(minuteText);
 
-				hourPlanet = new THREE.Mesh( 
-					new THREE.SphereGeometry(16, 16, 12),  
-					new THREE.MeshLambertMaterial({ 
-						color: 0x2e9afe,
-						ambient: 0x2e9afe 
-					})
-				);
-				scene.add(hourPlanet);
-
+				// Add hour planet/orbit/text
+				hourPlanet = addPlanet(16, 0x2e9afe);
+				addOrbit(hourRadius);
 				hourText = $("<div class='text' />");
 				$("body").append(hourText);
 
