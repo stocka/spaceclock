@@ -73,6 +73,12 @@
 	  	hourPlanet,
 	  	hourText;
 
+	  /**
+	   * Converts a percentage (0.0-1.0) to
+	   * its equivalent position in radians.
+	   * @param  {Number} percent The percentage to convert.
+	   * @return {Number}         The equivalent value in radians.
+	   */
 	  function getPercentageRadians(percent) {
 	  	// Figure out the radian location.  We offset
 	  	// by a quarter of the circle because 0 is
@@ -87,6 +93,15 @@
 	  	return radians;
 	  }
 
+	  /**
+	   * Positions an planet in its orbit and updates the
+	   * corresponding text node.
+	   * @param  {THREE.Mesh} mesh  		The mesh to position.
+	   * @param  {Number} radius 				The radius of the orbit.
+	   * @param  {Number} percent 			The percentage (0.0-1.0) indicating the orbit progress.
+	   * @param  {jQuery.Selector} text The text element to update.
+	   * @param  {String} textValue 		The new value of the text element.
+	   */
 	  function orbitMesh(mesh, radius, percent, text, textValue) {
 	  	// Get our position in radians
 	  	var radians = getPercentageRadians(percent);
@@ -109,6 +124,9 @@
 	  	}).html(textValue);
 	  }
 
+	  /**
+	   * Renders a frame in the animation.
+	   */
 		function render() { 
 			requestAnimationFrame(render); 
 
@@ -130,6 +148,12 @@
 			renderer.render(scene, camera); 
 		}
 
+		/**
+		 * Adds a planet to the scene and returns it.
+		 * @param {Number} planetSize  The size of the planet.
+		 * @param {Number} planetColor The color of the planet.
+		 * @return {THREE.Mesh}        The generated planet mesh.
+		 */
 		function addPlanet(planetSize, planetColor) {
 			var planet = new THREE.Mesh( 
 				new THREE.SphereGeometry(planetSize, 16, 12),  
@@ -143,6 +167,10 @@
 			return planet;
 		}
 
+		/**
+		 * Adds an orbit to the scene.
+		 * @param {Number} radius The radius of the orbit.
+		 */
 		function addOrbit(radius) {
 			var size = 360 / ORBITRESOLUTION;
 			var orbit = new THREE.Geometry();
@@ -164,6 +192,10 @@
 			scene.add(orbitLine);
 		}
 
+		/**
+		 * Adds a text element to the DOM and returns it.
+		 * @return {jQuery.Selector} The selector for the newly-created element.
+		 */
 		function addTextNode() {
 			var textNode = $("<div class='text' />");
 			$("body").append(textNode);
