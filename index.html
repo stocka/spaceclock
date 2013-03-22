@@ -1,289 +1,291 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>Spaceclock</title>
-	<meta charset="utf-8" />
-	<script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
-	<script src="https://raw.github.com/mrdoob/three.js/master/build/three.js"></script>
-	<link href='http://fonts.googleapis.com/css?family=Open+Sans:700' rel='stylesheet' type='text/css'>	
-	<style type="text/css">
-		body {
-			background: #000;
-		}
-		#container {
-			background: #000;
-			width: 425px;
-			height: 425px;
-		}
-		.text {
-			position: absolute;
-			z-index: 100;
-			color: white;			
-			font-family: 'Open Sans Bold', 'Open Sans', sans-serif;
-			font-weight: bold;
-			font-size: 16px;
-		}
-	</style>
-	<script type="text/javascript">
+  <title>Spaceclock</title>
+  <meta charset="utf-8" />
+  <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+  <script src="https://raw.github.com/mrdoob/three.js/master/build/three.js"></script>
+  <link href='http://fonts.googleapis.com/css?family=Open+Sans:700' rel='stylesheet' type='text/css'> 
+  <style type="text/css">
+    body {
+      background: #000;
+    }
+    #container {
+      background: #000;
+      width: 425px;
+      height: 425px;
+    }
+    .text {
+      position: absolute;
+      z-index: 100;
+      color: white;     
+      font-family: 'Open Sans Bold', 'Open Sans', sans-serif;
+      font-weight: bold;
+      font-size: 16px;
+    }
+  </style>
+  <script type="text/javascript">
+    // Store width/height values
+    var WIDTH, 
+      HEIGHT,
+      HALF_WIDTH,
+      HALF_HEIGHT,
+      ASPECT;
 
-		// Store width/height values
-		var WIDTH, 
-			HEIGHT,
-			HALF_WIDTH,
-			HALF_HEIGHT,
-			ASPECT;
+    // Store view constants
+    var VIEW_ANGLE = 75,
+      NEAR = 0.1,
+      FAR = 10000;
 
-		// Store view constants
-		var VIEW_ANGLE = 75,
-	    NEAR = 0.1,
-	    FAR = 10000;
+    // Store mathematical constants
+    var FULLCIRCLE = 2 * Math.PI,
+      RADIAN = Math.PI / 180,
+      RADIANOFFSET = 0.5 * Math.PI;
 
-	  // Store mathematical constants
-		var FULLCIRCLE = 2 * Math.PI,
-	    RADIAN = Math.PI / 180,
-	  	RADIANOFFSET = 0.5 * Math.PI;
+    // Store colors
+    var STARLIGHT = 0xf5f6ce,
+      AMBIENTLIGHT = 0x111111,
+      ORBITCOLOR = 0x333333,
+      SECONDCOLOR = 0xf5a9a9,
+      MINUTECOLOR = 0x64fe2e,
+      HOURCOLOR = 0x2e9afe;
 
-	  // Store colors
-		var STARLIGHT = 0xf5f6ce,
-	    AMBIENTLIGHT = 0x111111,
-	    ORBITCOLOR = 0x333333,
-	    SECONDCOLOR = 0xf5a9a9,
-	    MINUTECOLOR = 0x64fe2e,
-	    HOURCOLOR = 0x2e9afe;
+    // Store planetary size/radius information
+    var SECONDRADIUS = 75.0,
+      SECONDSIZE = 10,
+      MINUTERADIUS = 130.0,
+      MINUTESIZE = 12,
+      HOURRADIUS = 200.0,
+      HOURSIZE = 16,
+      SUNSIZE = 10,
+      ORBITRESOLUTION = 180;
 
-	  // Store planetary size/radius information
-	  var SECONDRADIUS = 75.0,
-	  	SECONDSIZE = 10,
-	  	MINUTERADIUS = 130.0,
-	  	MINUTESIZE = 12,
-	  	HOURRADIUS = 200.0,
-	  	HOURSIZE = 16,
-	  	SUNSIZE = 10,
-	  	ORBITRESOLUTION = 180;
+    var container,
+      scene,
+      renderer,
+      camera,
+      centerSun,
+      secondPlanet,
+      secondText,
+      minutePlanet,
+      minuteText,
+      hourPlanet,
+      hourText;
 
-	  var container,
-	  	scene,
-	  	renderer,
-	  	camera,
-	  	centerSun,
-	  	secondPlanet,
-	  	secondText,
-	  	minutePlanet,
-	  	minuteText,
-	  	hourPlanet,
-	  	hourText;
+    /**
+     * Converts a percentage (0.0-1.0) to
+     * its equivalent position in radians.
+     * @param  {Number} percent The percentage to convert.
+     * @return {Number}         The equivalent value in radians.
+     */
+    function getPercentageRadians(percent) {
+      // Figure out the radian location.  We offset
+      // by a quarter of the circle because 0 is
+      // actually at the 15-minute position.
+      var radians = -(percent * FULLCIRCLE) + RADIANOFFSET;
 
-	  /**
-	   * Converts a percentage (0.0-1.0) to
-	   * its equivalent position in radians.
-	   * @param  {Number} percent The percentage to convert.
-	   * @return {Number}         The equivalent value in radians.
-	   */
-	  function getPercentageRadians(percent) {
-	  	// Figure out the radian location.  We offset
-	  	// by a quarter of the circle because 0 is
-	  	// actually at the 15-minute position.
-	  	var radians = -(percent * FULLCIRCLE) + RADIANOFFSET;
+      // Wrap-around.
+      if (radians < 0) {
+        radians += FULLCIRCLE;
+      }
 
-	  	// Wrap-around.
-	  	if (radians < 0) {
-	  		radians += FULLCIRCLE;
-	  	}
+      return radians;
+    }
 
-	  	return radians;
-	  }
+    /**
+     * Positions an planet in its orbit and updates the
+     * corresponding text node.
+     * @param  {THREE.Mesh} mesh      The mesh to position.
+     * @param  {Number} radius        The radius of the orbit.
+     * @param  {Number} percent       The percentage (0.0-1.0) indicating the orbit progress.
+     * @param  {jQuery.Selector} text The text element to update.
+     * @param  {String} textValue     The new value of the text element.
+     */
+    function orbitMesh(mesh, radius, percent, text, textValue) {
+      // Get our position in radians
+      var radians = getPercentageRadians(percent);
 
-	  /**
-	   * Positions an planet in its orbit and updates the
-	   * corresponding text node.
-	   * @param  {THREE.Mesh} mesh  		The mesh to position.
-	   * @param  {Number} radius 				The radius of the orbit.
-	   * @param  {Number} percent 			The percentage (0.0-1.0) indicating the orbit progress.
-	   * @param  {jQuery.Selector} text The text element to update.
-	   * @param  {String} textValue 		The new value of the text element.
-	   */
-	  function orbitMesh(mesh, radius, percent, text, textValue) {
-	  	// Get our position in radians
-	  	var radians = getPercentageRadians(percent);
+      // Update our x/y positions of the mesh
+      mesh.position.x = Math.cos(radians) * radius;
+      mesh.position.y = Math.sin(radians) * radius;
 
-	  	// Update our x/y positions of the mesh
-	  	mesh.position.x = Math.cos(radians) * radius;
-	  	mesh.position.y = Math.sin(radians) * radius;
+      // Update the text, making sure it's offset slightly
+      // from the mesh
+      var textRadius = radius * 0.95,
+        textRadians = -radians;
+      textRadians += (0.1 * (300 / textRadius));
 
-	  	// Update the text, making sure it's offset slightly
-	  	// from the mesh
-	  	var textRadius = radius * 0.95;
-	  	var textRadians = -radians;
-	  	textRadians += (0.1 * (300 / textRadius));
+      // Reposition the text, translating Three coords
+      // to HTML coords
+      text.offset({
+        left: Math.floor((Math.cos(textRadians) * textRadius) + HALF_WIDTH),
+        top: Math.floor((Math.sin(textRadians) * textRadius) + HALF_HEIGHT)
+      }).html(textValue);
+    }
 
-	  	// Reposition the text, translating Three coords
-	  	// to HTML coords
-	  	text.offset({
-	  		left: Math.floor((Math.cos(textRadians) * textRadius) + HALF_WIDTH),
-	  		top: Math.floor((Math.sin(textRadians) * textRadius) + HALF_HEIGHT)
-	  	}).html(textValue);
-	  }
+    /**
+     * Renders a frame in the animation.
+     */
+    function render() { 
+      requestAnimationFrame(render); 
 
-	  /**
-	   * Renders a frame in the animation.
-	   */
-		function render() { 
-			requestAnimationFrame(render); 
+      var curDateTime = new Date();
+      var s = curDateTime.getSeconds();
+      var m = curDateTime.getMinutes();
+      var h = curDateTime.getHours() % 12;
 
-			var curDateTime = new Date();
-			var s = curDateTime.getSeconds();
-			var m = curDateTime.getMinutes();
-			var h = curDateTime.getHours() % 12;
+      // Make sure the 0th hour renders as "12", e.g. "12 AM"
+      var hText = h;
+      if ( hText === 0 ) {
+        hText = 12;
+      }
 
-			// Make sure the 0th hour renders as "12", e.g. "12 AM"
-			var hText = h;
-			if ( hText === 0 ) {
-				hText = 12;
-			}
+      orbitMesh(secondPlanet, SECONDRADIUS, s / 60.0, secondText, s);
+      orbitMesh(minutePlanet, MINUTERADIUS, m / 60.0, minuteText, m);
+      orbitMesh(hourPlanet, HOURRADIUS, h / 12.0, hourText, hText);
+      
+      renderer.render(scene, camera); 
+    }
 
-			orbitMesh(secondPlanet, SECONDRADIUS, s / 60.0, secondText, s);
-			orbitMesh(minutePlanet, MINUTERADIUS, m / 60.0, minuteText, m);
-			orbitMesh(hourPlanet, HOURRADIUS, h / 12.0, hourText, hText);
-			
-			renderer.render(scene, camera); 
-		}
+    /**
+     * Adds a planet to the scene and returns it.
+     * @param {Number} planetSize  The size of the planet.
+     * @param {Number} planetColor The color of the planet.
+     * @return {THREE.Mesh}        The generated planet mesh.
+     */
+    function addPlanet(planetSize, planetColor) {
+      var planet = new THREE.Mesh( 
+        new THREE.SphereGeometry(planetSize, 16, 12),  
+        new THREE.MeshLambertMaterial({ 
+          color: planetColor,
+          ambient: planetColor 
+        })
+      );
+      scene.add(planet);
 
-		/**
-		 * Adds a planet to the scene and returns it.
-		 * @param {Number} planetSize  The size of the planet.
-		 * @param {Number} planetColor The color of the planet.
-		 * @return {THREE.Mesh}        The generated planet mesh.
-		 */
-		function addPlanet(planetSize, planetColor) {
-			var planet = new THREE.Mesh( 
-				new THREE.SphereGeometry(planetSize, 16, 12),  
-				new THREE.MeshLambertMaterial({ 
-					color: planetColor,
-					ambient: planetColor 
-				})
-			);
-			scene.add(planet);
+      return planet;
+    }
 
-			return planet;
-		}
+    /**
+     * Adds an orbit to the scene.
+     * @param {Number} radius The radius of the orbit.
+     */
+    function addOrbit(radius) {
+      var size = 360 / ORBITRESOLUTION,
+        orbit = new THREE.Geometry(),
+        i = 0,
+        orbitLine = new THREE.Line( 
+          orbit, 
+          new THREE.LineBasicMaterial( { color: ORBITCOLOR } )
+        );
 
-		/**
-		 * Adds an orbit to the scene.
-		 * @param {Number} radius The radius of the orbit.
-		 */
-		function addOrbit(radius) {
-			var size = 360 / ORBITRESOLUTION;
-			var orbit = new THREE.Geometry();
+      for ( i = 0; i <= ORBITRESOLUTION; i += 1 ) {
+        var segment = (i * size) * RADIAN;
+        orbit.vertices.push( 
+          new THREE.Vector3( 
+            Math.cos( segment ) * radius, 
+            Math.sin( segment ) * radius,
+            0
+        ));
+      }
 
-			for ( var i = 0; i <= ORBITRESOLUTION; i ++ ) {
-				segment = (i * size) * RADIAN;
-				orbit.vertices.push( 
-					new THREE.Vector3( 
-						Math.cos( segment ) * radius, 
-						Math.sin( segment ) * radius,
-						0
-				));
-			}
+      scene.add(orbitLine);
+    }
 
-			var orbitLine = new THREE.Line( 
-				orbit, 
-				new THREE.LineBasicMaterial( { color: ORBITCOLOR } )
-			);
-			scene.add(orbitLine);
-		}
+    /**
+     * Adds a text element to the DOM and returns it.
+     * @return {jQuery.Selector} The selector for the newly-created element.
+     */
+    function addTextNode() {
+      var textNode = $("<div class='text' />");
+      $("body").append(textNode);
+      return textNode;
+    }
 
-		/**
-		 * Adds a text element to the DOM and returns it.
-		 * @return {jQuery.Selector} The selector for the newly-created element.
-		 */
-		function addTextNode() {
-			var textNode = $("<div class='text' />");
-			$("body").append(textNode);
-			return textNode;
-		}
+    $(function () {
+        var p = 0;
 
-		$(function () {
-				container = $("#container");
-				WIDTH = container.width();
-				HEIGHT = container.height();
-				HALF_WIDTH = WIDTH / 2;
-				HALF_HEIGHT = HEIGHT / 2;
-				ASPECT = WIDTH / HEIGHT;
+        container = $("#container");
+        WIDTH = container.width();
+        HEIGHT = container.height();
+        HALF_WIDTH = WIDTH / 2;
+        HALF_HEIGHT = HEIGHT / 2;
+        ASPECT = WIDTH / HEIGHT;
 
-				// Set up the scene/renderer
-				scene = new THREE.Scene();
+        // Set up the scene/renderer
+        scene = new THREE.Scene();
 
-				camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR );
-				camera.position.z = 300;
+        camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR );
+        camera.position.z = 300;
 
-				renderer = new THREE.WebGLRenderer();
-				renderer.setSize(WIDTH, HEIGHT);
-				container.append(renderer.domElement);
+        renderer = new THREE.WebGLRenderer();
+        renderer.setSize(WIDTH, HEIGHT);
+        container.append(renderer.domElement);
 
-				// Create the sun
-				centerSun = new THREE.Mesh( 
-					new THREE.SphereGeometry(SUNSIZE, 36, 12),
-					new THREE.MeshBasicMaterial( { color: STARLIGHT } ));
-				scene.add(centerSun);
+        // Create the sun
+        centerSun = new THREE.Mesh( 
+          new THREE.SphereGeometry(SUNSIZE, 36, 12),
+          new THREE.MeshBasicMaterial( { color: STARLIGHT } ));
+        scene.add(centerSun);
 
-				// Add minimal ambient light
+        // Add minimal ambient light
         var ambientLight = new THREE.AmbientLight(AMBIENTLIGHT);
         scene.add(ambientLight);
 
         // Let there be light!
-				var sunLight = new THREE.PointLight( STARLIGHT, 1, WIDTH * 8 ); 
-				sunLight.position.z = 50;
-				scene.add( sunLight );
+        var sunLight = new THREE.PointLight( STARLIGHT, 1, WIDTH * 8 ); 
+        sunLight.position.z = 50;
+        scene.add( sunLight );
 
-				// Add second planet/orbit/text
-				secondPlanet = addPlanet(SECONDSIZE, SECONDCOLOR);
-				addOrbit(SECONDRADIUS);
-				secondText = addTextNode();
+        // Add second planet/orbit/text
+        secondPlanet = addPlanet(SECONDSIZE, SECONDCOLOR);
+        addOrbit(SECONDRADIUS);
+        secondText = addTextNode();
 
-				// Add minute planet/orbit/text
-				minutePlanet = addPlanet(MINUTESIZE, MINUTECOLOR);	
-				addOrbit(MINUTERADIUS);
-				minuteText = addTextNode();
+        // Add minute planet/orbit/text
+        minutePlanet = addPlanet(MINUTESIZE, MINUTECOLOR);  
+        addOrbit(MINUTERADIUS);
+        minuteText = addTextNode();
 
-				// Add hour planet/orbit/text
-				hourPlanet = addPlanet(HOURSIZE, HOURCOLOR);
-				addOrbit(HOURRADIUS);
-				hourText = addTextNode();
+        // Add hour planet/orbit/text
+        hourPlanet = addPlanet(HOURSIZE, HOURCOLOR);
+        addOrbit(HOURRADIUS);
+        hourText = addTextNode();
 
-				// Add stars and whatnot
-				var stars = new THREE.Geometry(),
-					starStuff =
-		      new THREE.ParticleBasicMaterial({
-		        color: STARLIGHT,
-		        size: 1,
-		        sizeAttenuation: false
-		      });					
+        // Add stars and whatnot
+        var stars = new THREE.Geometry(),
+          starStuff =
+          new THREE.ParticleBasicMaterial({
+            color: STARLIGHT,
+            size: 1,
+            sizeAttenuation: false
+          });         
 
-		    // Create the star vertices
-				for(var p = 0; p < 50; p++) {
-					// Randomly place our star
-				  var pX = Math.random() * WIDTH - HALF_WIDTH,
-				    pY = Math.random() * HEIGHT - HALF_HEIGHT,
-				    star = new THREE.Vector3(pX, pY, -100);
+        // Create the star vertices
+        for(p = 0; p < 50; p += 1) {
+          // Randomly place our star
+          var pX = Math.random() * WIDTH - HALF_WIDTH,
+            pY = Math.random() * HEIGHT - HALF_HEIGHT,
+            star = new THREE.Vector3(pX, pY, -100);
 
-				  // Add it to the geometry
-				  stars.vertices.push(star);
-				}
+          // Add it to the geometry
+          stars.vertices.push(star);
+        }
 
-				// Add the star system to the scene
-				var starSystem = new THREE.ParticleSystem(
-			    stars,
-			    starStuff);
-				scene.add(starSystem);
+        // Add the star system to the scene
+        var starSystem = new THREE.ParticleSystem(
+          stars,
+          starStuff);
+        scene.add(starSystem);
 
-				render();
-		});
+        render();
+    });
 
-	</script>
+  </script>
 
 </head>
 <body>
-	<div id="container">
-	</div>
+  <div id="container">
+  </div>
 </body>
 </html>
