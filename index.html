@@ -65,6 +65,7 @@
       renderer,
       camera,
       centerSun,
+      hourFlash,
       secondPlanet,
       secondText,
       minutePlanet,
@@ -152,6 +153,15 @@
       orbitMesh(secondPlanet, SECONDRADIUS, sPct, secondText, s);
       orbitMesh(minutePlanet, MINUTERADIUS, mPct, minuteText, m);
       orbitMesh(hourPlanet, HOURRADIUS, hPct, hourText, hText);
+
+      // If we just hit the hour mark,
+      // add a flash effect
+      if( m === 0 && s <= 1 ) {
+        hourFlash.material.opacity = 1 - (s / 2.0) - (curDateTime.getMilliseconds() / 2000.0);
+      }
+      else {
+        hourFlash.material.opacity = 0;
+      }
       
       renderer.render(scene, camera); 
     }
@@ -245,6 +255,18 @@
         var sunLight = new THREE.PointLight( STARLIGHT, 1, WIDTH * 8 ); 
         sunLight.position.z = 50;
         scene.add( sunLight );
+
+        // Set up our flash
+        hourFlash = new THREE.Mesh(
+            new THREE.PlaneGeometry(WIDTH, HEIGHT, 1, 1),
+            new THREE.MeshBasicMaterial({ 
+              color: STARLIGHT,
+              transparent: true,
+              opacity: 0.0 
+            })
+        );
+        hourFlash.position.y = 10;
+        scene.add(hourFlash);
 
         // Add second planet/orbit/text
         secondPlanet = addPlanet(SECONDSIZE, SECONDCOLOR);
