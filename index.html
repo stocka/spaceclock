@@ -113,7 +113,11 @@
       // from the mesh
       var textRadius = radius * 0.95,
         textRadians = -radians;
-      textRadians += (0.1 * (300 / textRadius));
+      textRadians += (0.1 * (300.0 / textRadius));
+
+      // Cap the text radian length at 2 decimal places
+      // to make the positioning less-jittery
+      textRadians = textRadians.toFixed(2);
 
       // Reposition the text, translating Three coords
       // to HTML coords
@@ -134,15 +138,20 @@
       var m = curDateTime.getMinutes();
       var h = curDateTime.getHours() % 12;
 
+      // Calculate finer-grained percentages for better positioning
+      var hPct = ((h * 60) + m) / 720.0;
+      var mPct = ((m * 60) + s) / 3600.0;
+      var sPct = ((s * 1000) + curDateTime.getMilliseconds()) / 60000.0;
+
       // Make sure the 0th hour renders as "12", e.g. "12 AM"
       var hText = h;
       if ( hText === 0 ) {
         hText = 12;
       }
 
-      orbitMesh(secondPlanet, SECONDRADIUS, s / 60.0, secondText, s);
-      orbitMesh(minutePlanet, MINUTERADIUS, m / 60.0, minuteText, m);
-      orbitMesh(hourPlanet, HOURRADIUS, h / 12.0, hourText, hText);
+      orbitMesh(secondPlanet, SECONDRADIUS, sPct, secondText, s);
+      orbitMesh(minutePlanet, MINUTERADIUS, mPct, minuteText, m);
+      orbitMesh(hourPlanet, HOURRADIUS, hPct, hourText, hText);
       
       renderer.render(scene, camera); 
     }
